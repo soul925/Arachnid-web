@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPinIcon, ThermometerIcon, WindIcon, AlertCircleIcon } from "lucide-react"
+import { MapPinIcon, ThermometerIcon, WindIcon, AlertCircleIcon, CloudOffIcon } from "lucide-react"
 import { useLogContext } from "@/context/log-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchWeatherData, type WeatherData } from "@/app/actions/weather"
+import { Badge } from "@/components/ui/badge"
 
 interface LocationOption {
   name: string
@@ -20,6 +21,7 @@ export function LocationWeather() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [usingMockData, setUsingMockData] = useState(false)
   const { addLog } = useLogContext()
 
   // Predefined locations
@@ -37,6 +39,7 @@ export function LocationWeather() {
 
     setLoading(true)
     setError(null)
+    setUsingMockData(false)
 
     try {
       // Set the location immediately
@@ -54,11 +57,22 @@ export function LocationWeather() {
 
       if (weatherData) {
         setWeather(weatherData)
-        addLog({
-          message: `Weather data retrieved for ${locationName}: ${weatherData.description}, ${weatherData.temperature}°C`,
-          type: "success",
-          timestamp: new Date(),
-        })
+
+        // Check if we're using mock data
+        if (weatherData.description.includes("unavailable")) {
+          setUsingMockData(true)
+          addLog({
+            message: `Using simulated weather data for ${locationName} - API key may be missing`,
+            type: "warning",
+            timestamp: new Date(),
+          })
+        } else {
+          addLog({
+            message: `Weather data retrieved for ${locationName}: ${weatherData.description}, ${weatherData.temperature.toFixed(1)}°C`,
+            type: "success",
+            timestamp: new Date(),
+          })
+        }
       } else {
         throw new Error("No weather data received")
       }
@@ -154,23 +168,41 @@ export function LocationWeather() {
           </div>
         ) : (
           <>
-            <div className="flex items-center">
-              <MapPinIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">{location?.name}</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <MapPinIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">{location?.name}</h3>
+              </div>
+
+              {usingMockData && (
+                <Badge variant="outline" className="text-amber-500 border-amber-500">
+                  <CloudOffIcon className="h-3 w-3 mr-1" />
+                  Simulated Data
+                </Badge>
+              )}
             </div>
+
             <div className="mt-4 flex items-center">
               {weather?.icon && (
                 <img
                   src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
                   alt={weather.description}
                   className="h-16 w-16"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    e.currentTarget.style.display = "none"
+                  }}
                 />
               )}
               <div className="ml-2">
                 <div className="text-2xl font-bold">{weather?.temperature.toFixed(1)}°C</div>
                 <div className="text-muted-foreground capitalize">{weather?.description}</div>
+                {usingMockData && (
+                  <div className="text-xs text-amber-500 mt-1">API key missing - using simulated data</div>
+                )}
               </div>
             </div>
+
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="flex items-center">
                 <ThermometerIcon className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -178,7 +210,7 @@ export function LocationWeather() {
               </div>
               <div className="flex items-center">
                 <WindIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                <span>Wind: {weather?.windSpeed} m/s</span>
+                <span>Wind: {weather?.windSpeed.toFixed(1)} m/s</span>
               </div>
             </div>
           </>
