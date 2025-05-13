@@ -12,6 +12,7 @@ import { LogProvider } from "@/context/log-context"
 import { Header } from "@/components/header"
 import { EmergencyContactProvider } from "@/context/emergency-contact-context"
 import { SendSMS } from "@/components/send-sms"
+import { RtspHelper } from "@/components/rtsp-helper"
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false)
@@ -35,11 +36,12 @@ export default function Dashboard() {
                 <LocationWeather />
               </div>
               <Tabs defaultValue="camera-feeds" className="space-y-4">
-                <TabsList className="grid grid-cols-4">
+                <TabsList className="grid grid-cols-5">
                   <TabsTrigger value="camera-feeds">Camera Feeds</TabsTrigger>
                   <TabsTrigger value="logs">Logs</TabsTrigger>
                   <TabsTrigger value="settings">Settings</TabsTrigger>
                   <TabsTrigger value="sms">SMS</TabsTrigger>
+                  <TabsTrigger value="rtsp-help">RTSP Help</TabsTrigger>
                 </TabsList>
                 <TabsContent value="camera-feeds" className="space-y-4">
                   <CameraFeeds />
@@ -71,6 +73,16 @@ export default function Dashboard() {
                     </CardHeader>
                     <CardContent>
                       <SendSMS />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="rtsp-help" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>RTSP Stream Setup</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <RtspHelper />
                     </CardContent>
                   </Card>
                 </TabsContent>

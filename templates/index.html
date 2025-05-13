@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv8 Object Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f4f8;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2d3748;
+            text-align: center;
+        }
+        .video-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .video-feed {
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            max-width: 100%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e2e8f0;
+            border-radius: 8px;
+        }
+        .info p {
+            margin: 5px 0;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>YOLOv8 Object Detection</h1>
+        
+        <div class="video-container">
+            <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Video Feed">
+        </div>
+        
+        <div class="info">
+            <p><strong>Source:</strong> RTSP Stream</p>
+            <p><strong>Model:</strong> YOLOv8</p>
+            <p><strong>Status:</strong> Running</p>
+            <p><strong>Note:</strong> This feed is being processed with YOLOv8 object detection in real-time.</p>
+        </div>
+    </div>
+</body>
+</html>

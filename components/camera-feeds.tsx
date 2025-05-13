@@ -34,7 +34,7 @@ interface CameraFeedsProps {
 
 interface SavedFeed {
   id: string
-  type: "objectDetection" | "thermal" | "lidar"
+  type: "objectDetection" | "thermal" | "lidar" | "customFeed"
   url: string
   timestamp: Date
   name: string
@@ -46,6 +46,7 @@ interface CameraFeedData {
   objectDetection: { url: string; active: boolean }
   thermal: { url: string; active: boolean }
   lidar: { url: string; active: boolean }
+  customFeed: { url: string; active: boolean }
 }
 
 // Function to update camera feed data
@@ -116,6 +117,21 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     return "/placeholder.svg?height=720&width=1280"
   })
 
+  const [customFeedUrl, setCustomFeedUrl] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedUrls = localStorage.getItem(urlsKey)
+      if (savedUrls) {
+        try {
+          const urls = JSON.parse(savedUrls)
+          return urls.customFeed || "/placeholder.svg?height=720&width=1280"
+        } catch (e) {
+          console.error("Error parsing saved URLs:", e)
+        }
+      }
+    }
+    return "/placeholder.svg?height=720&width=1280"
+  })
+
   const [activeFeeds, setActiveFeeds] = useState(() => {
     if (typeof window !== "undefined") {
       const savedActiveFeeds = localStorage.getItem(activeFeedsKey)
@@ -131,6 +147,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
       objectDetection: false,
       thermal: false,
       lidar: false,
+      customFeed: false,
     }
   })
 
@@ -149,6 +166,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
       objectDetection: "direct" as "direct" | "iframe" | "hls",
       thermal: "direct" as "direct" | "iframe" | "hls",
       lidar: "direct" as "direct" | "iframe" | "hls",
+      customFeed: "direct" as "direct" | "iframe" | "hls",
     }
   })
 
@@ -158,11 +176,13 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     objectDetection: false,
     thermal: false,
     lidar: false,
+    customFeed: false,
   })
   const [error, setError] = useState({
     objectDetection: null as string | null,
     thermal: null as string | null,
     lidar: null as string | null,
+    customFeed: null as string | null,
   })
   const [maximizedFeed, setMaximizedFeed] = useState<string | null>(null)
   const { addLog } = useLogContext()
@@ -171,11 +191,13 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     objectDetection: useRef<HTMLVideoElement>(null),
     thermal: useRef<HTMLVideoElement>(null),
     lidar: useRef<HTMLVideoElement>(null),
+    customFeed: useRef<HTMLVideoElement>(null),
   }
   const iframeRefs = {
     objectDetection: useRef<HTMLIFrameElement>(null),
     thermal: useRef<HTMLIFrameElement>(null),
     lidar: useRef<HTMLIFrameElement>(null),
+    customFeed: useRef<HTMLIFrameElement>(null),
   }
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -224,10 +246,11 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         objectDetection: objectDetectionUrl,
         thermal: thermalUrl,
         lidar: lidarUrl,
+        customFeed: customFeedUrl,
       }
       localStorage.setItem(urlsKey, JSON.stringify(urls))
     }
-  }, [objectDetectionUrl, thermalUrl, lidarUrl, urlsKey])
+  }, [objectDetectionUrl, thermalUrl, lidarUrl, customFeedUrl, urlsKey])
 
   // Save active feeds to localStorage whenever they change
   useEffect(() => {
@@ -265,8 +288,12 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         url: lidarUrl,
         active: activeFeeds.lidar,
       },
+      customFeed: {
+        url: customFeedUrl,
+        active: activeFeeds.customFeed,
+      },
     })
-  }, [objectDetectionUrl, thermalUrl, lidarUrl, activeFeeds])
+  }, [objectDetectionUrl, thermalUrl, lidarUrl, customFeedUrl, activeFeeds])
 
   // Handle escape key to exit fullscreen
   useEffect(() => {
@@ -285,7 +312,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
       setActiveFeeds((prev) => {
         const newState = { ...prev, [feed]: !prev[feed] }
         addLog({
-          message: `${feed.charAt(0).toUpperCase() + feed.slice(1)} camera ${newState[feed] ? "activated" : "deactivated"}`,
+          message: `${feed.charAt(0).toUpperCase() + feed.slice(1)} camera ${
+            newState[feed] ? "activated" : "deactivated"
+          }`,
           type: "info",
           timestamp: new Date(),
         })
@@ -304,11 +333,13 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
           return thermalUrl
         case "lidar":
           return lidarUrl
+        case "customFeed":
+          return customFeedUrl
         default:
           return ""
       }
     },
-    [objectDetectionUrl, thermalUrl, lidarUrl],
+    [objectDetectionUrl, thermalUrl, lidarUrl, customFeedUrl],
   )
 
   const fetchFeed = useCallback(
@@ -328,9 +359,6 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
           throw new Error("Invalid URL format")
         }
 
-        // Skip the HEAD request which often fails due to CORS
-        // Instead, just update the URL and let the video/iframe element handle loading
-
         // Update the URL state
         switch (feed) {
           case "objectDetection":
@@ -341,6 +369,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
             break
           case "lidar":
             setLidarUrl(url)
+            break
+          case "customFeed":
+            setCustomFeedUrl(url)
             break
         }
 
@@ -357,6 +388,10 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
           lidar: {
             url: feed === "lidar" ? url : lidarUrl,
             active: activeFeeds.lidar,
+          },
+          customFeed: {
+            url: feed === "customFeed" ? url : customFeedUrl,
+            active: activeFeeds.customFeed,
           },
         })
 
@@ -387,7 +422,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         setLoading((prev) => ({ ...prev, [feed]: false }))
       }
     },
-    [addLog, objectDetectionUrl, thermalUrl, lidarUrl, activeFeeds],
+    [addLog, objectDetectionUrl, thermalUrl, lidarUrl, customFeedUrl, activeFeeds],
   )
 
   const handleUrlChange = (feed: keyof typeof activeFeeds, url: string) => {
@@ -400,6 +435,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         break
       case "lidar":
         setLidarUrl(url)
+        break
+      case "customFeed":
+        setCustomFeedUrl(url)
         break
     }
   }
@@ -445,7 +483,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
   }
 
   const saveFeed = useCallback(
-    (type: "objectDetection" | "thermal" | "lidar", saveAsImage = true) => {
+    (type: "objectDetection" | "thermal" | "lidar" | "customFeed", saveAsImage = true) => {
       const url = getFeedUrl(type)
       const name = feedName || `${type.charAt(0).toUpperCase() + type.slice(1)} - ${new Date().toLocaleString()}`
 
@@ -536,6 +574,8 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         return "Heat signature detection"
       case "lidar":
         return "3D mapping and obstacle detection"
+      case "customFeed":
+        return "Custom video feed"
       default:
         return ""
     }
@@ -549,9 +589,15 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         return <ThermometerIcon className="h-4 w-4 text-muted-foreground" />
       case "lidar":
         return <ScanIcon className="h-4 w-4 text-muted-foreground" />
+      case "customFeed":
+        return <CameraIcon className="h-4 w-4 text-muted-foreground" />
       default:
         return null
     }
+  }
+
+  const isRtspUrl = (url: string): boolean => {
+    return url.toLowerCase().startsWith("rtsp://")
   }
 
   const handleVideoError = (feedType: string) => {
@@ -568,7 +614,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     if (loading[feedType]) {
       return (
         <div
-          className={`w-full ${isMaximized ? "h-full" : "aspect-video"} flex items-center justify-center bg-muted rounded-md border`}
+          className={`w-full ${
+            isMaximized ? "h-full" : "aspect-video"
+          } flex items-center justify-center bg-muted rounded-md border`}
         >
           <Skeleton className={`${isMaximized ? "h-32 w-32" : "h-16 w-16"}`} />
         </div>
@@ -578,7 +626,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     if (error[feedType]) {
       return (
         <div
-          className={`w-full ${isMaximized ? "h-full" : "aspect-video"} flex flex-col items-center justify-center bg-muted/30 rounded-md border border-destructive p-4 text-center`}
+          className={`w-full ${
+            isMaximized ? "h-full" : "aspect-video"
+          } flex flex-col items-center justify-center bg-muted/30 rounded-md border border-destructive p-4 text-center`}
         >
           <AlertCircleIcon className="h-8 w-8 text-destructive mb-2" />
           <div className="text-destructive font-medium">{error[feedType]}</div>
@@ -597,7 +647,9 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     if (!activeFeeds[feedType]) {
       return (
         <div
-          className={`w-full ${isMaximized ? "h-full" : "aspect-video"} flex flex-col items-center justify-center bg-muted/30 rounded-md border p-4 text-center`}
+          className={`w-full ${
+            isMaximized ? "h-full" : "aspect-video"
+          } flex flex-col items-center justify-center bg-muted/30 rounded-md border p-4 text-center`}
         >
           <div className="text-muted-foreground mb-2">Feed inactive</div>
           <Button size="sm" onClick={() => toggleFeed(feedType as keyof typeof activeFeeds)}>
@@ -609,6 +661,40 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     }
 
     if (mode === "direct") {
+      // Check if it's an RTSP URL
+      if (isRtspUrl(url)) {
+        return (
+          <div
+            className={`relative w-full ${isMaximized ? "h-full" : "aspect-video"} bg-black rounded-md overflow-hidden`}
+          >
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <AlertCircleIcon className="h-8 w-8 text-amber-500 mb-2" />
+              <h3 className="text-lg font-medium mb-1">RTSP Stream Detected</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                RTSP streams cannot be displayed directly in browsers. Please use one of these options:
+              </p>
+              <div className="flex flex-col gap-2 w-full max-w-md">
+                <Button
+                  variant="outline"
+                  onClick={() => handleEmbedModeChange(feedType as keyof typeof embedMode, "iframe")}
+                >
+                  Switch to Iframe Mode
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleEmbedModeChange(feedType as keyof typeof embedMode, "hls")}
+                >
+                  Switch to HLS Mode
+                </Button>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Note: You'll need a streaming server that converts RTSP to HTTP/HLS
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       return (
         <div
           className={`relative w-full ${isMaximized ? "h-full" : "aspect-video"} bg-black rounded-md overflow-hidden`}
@@ -637,7 +723,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
                 size="icon"
                 variant="outline"
                 className="h-7 w-7 bg-background/80 backdrop-blur-sm"
-                onClick={() => saveFeed(feedType as "objectDetection" | "thermal" | "lidar", true)}
+                onClick={() => saveFeed(feedType as "objectDetection" | "thermal" | "lidar" | "customFeed", true)}
               >
                 <SaveIcon className="h-4 w-4" />
               </Button>
@@ -652,12 +738,33 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         <div
           className={`relative w-full ${isMaximized ? "h-full" : "aspect-video"} bg-black rounded-md overflow-hidden`}
         >
-          <iframe
-            ref={iframeRefs[feedType as keyof typeof iframeRefs]}
-            src={url}
-            className="w-full h-full border-0"
-            allowFullScreen
-          />
+          {isRtspUrl(url) ? (
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <AlertCircleIcon className="h-8 w-8 text-amber-500 mb-2" />
+              <h3 className="text-lg font-medium mb-1">RTSP Stream Configuration</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                To view this RTSP stream, you need a web server that can proxy the stream.
+              </p>
+              <div className="text-xs text-muted-foreground mt-2 max-w-md">
+                <p className="mb-2">
+                  Your current RTSP URL: <code className="bg-muted p-1 rounded">{url}</code>
+                </p>
+                <p>Consider using:</p>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>A Flask server with OpenCV</li>
+                  <li>RTSP to WebRTC gateway</li>
+                  <li>RTSP to HLS converter</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <iframe
+              ref={iframeRefs[feedType as keyof typeof iframeRefs]}
+              src={url}
+              className="w-full h-full border-0"
+              allowFullScreen
+            />
+          )}
           {!isMaximized && (
             <div className="absolute top-2 right-2 flex gap-1">
               <Button
@@ -677,9 +784,31 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
     // HLS mode
     return (
       <div className={`relative w-full ${isMaximized ? "h-full" : "aspect-video"} bg-black rounded-md overflow-hidden`}>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-white text-sm">HLS player would be implemented here</div>
-        </div>
+        {isRtspUrl(url) ? (
+          <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+            <AlertCircleIcon className="h-8 w-8 text-amber-500 mb-2" />
+            <h3 className="text-lg font-medium mb-1">RTSP to HLS Conversion Required</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              To view this RTSP stream as HLS, you need to convert it using a streaming server.
+            </p>
+            <div className="text-xs text-muted-foreground mt-2 max-w-md">
+              <p className="mb-2">
+                Your current RTSP URL: <code className="bg-muted p-1 rounded">{url}</code>
+              </p>
+              <p>Recommended solutions:</p>
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                <li>FFmpeg with HLS output</li>
+                <li>Media servers like Wowza or Ant Media</li>
+                <li>Node-Media-Server</li>
+              </ul>
+              <p className="mt-2">Once converted, update the URL to the HLS stream (usually ending in .m3u8)</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-white text-sm">HLS player would be implemented here</div>
+          </div>
+        )}
         {!isMaximized && (
           <div className="absolute top-2 right-2 flex gap-1">
             <Button
@@ -703,7 +832,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold">
-              {maximizedFeed.charAt(0).toUpperCase() + maximizedFeed.slice(1)} Camera
+              {maximizedFeed.charAt(0).toUpperCase() + maximizedFeed.slice(1) + " Camera"}
             </h2>
             <Button variant="ghost" size="icon" onClick={() => toggleMaximize(null)}>
               <XIcon className="h-5 w-5" />
@@ -905,6 +1034,73 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
             </Select>
           </CardFooter>
         </Card>
+
+        {/* Custom Feed */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-sm font-medium">Custom Feed</CardTitle>
+              <CardDescription>Additional video feed</CardDescription>
+            </div>
+            {getFeedIcon("customFeed")}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Enter camera URL"
+                value={customFeedUrl}
+                onChange={(e) => handleUrlChange("customFeed", e.target.value)}
+              />
+              <Button variant="outline" onClick={() => handleUpdateUrl("customFeed")} disabled={loading.customFeed}>
+                {loading.customFeed ? "Loading..." : "Update"}
+              </Button>
+            </div>
+            {renderFeedContent("customFeed")}
+          </CardContent>
+          <CardFooter className="flex justify-between p-4">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={activeFeeds.customFeed ? "outline" : "default"}
+                onClick={() => toggleFeed("customFeed")}
+              >
+                {activeFeeds.customFeed ? (
+                  <>
+                    <PauseIcon className="h-4 w-4 mr-2" />
+                    Pause
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon className="h-4 w-4 mr-2" />
+                    Start
+                  </>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => saveFeed("customFeed", true)}
+                disabled={!activeFeeds.customFeed}
+              >
+                <SaveIcon className="h-4 w-4 mr-2" />
+                Save Image
+              </Button>
+            </div>
+            <Select
+              value={embedMode.customFeed}
+              onValueChange={(value) => handleEmbedModeChange("customFeed", value as any)}
+            >
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue placeholder="Mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="direct">Direct</SelectItem>
+                <SelectItem value="iframe">Iframe</SelectItem>
+                <SelectItem value="hls">HLS</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardFooter>
+        </Card>
       </div>
     )
   }
@@ -989,9 +1185,7 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="font-medium truncate">{feed.name}</div>
-                  <Badge variant="outline" className="ml-2 shrink-0">
-                    {feed.isImage ? "Image" : "Video URL"}
-                  </Badge>
+                  <Badge variant="outline">{feed.isImage ? "Image" : "Video URL"}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">{feed.timestamp.toLocaleString()}</div>
               </CardContent>
@@ -1023,22 +1217,11 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
                 <ScanIcon className="h-4 w-4 mr-2" />
                 LIDAR
               </TabsTrigger>
+              <TabsTrigger value="customFeed" className="flex-1">
+                <CameraIcon className="h-4 w-4 mr-2" />
+                Custom
+              </TabsTrigger>
             </TabsList>
-            <div className="flex items-center">
-              <Select
-                value={embedMode.objectDetection}
-                onValueChange={(value) => handleEmbedModeChange("objectDetection", value as any)}
-              >
-                <SelectTrigger className="w-[90px] h-7 text-xs">
-                  <SelectValue placeholder="Mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="direct">Direct</SelectItem>
-                  <SelectItem value="iframe">Iframe</SelectItem>
-                  <SelectItem value="hls">HLS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <TabsContent value="objectDetection" className="mt-0">
             {renderFeedContent("objectDetection")}
@@ -1065,6 +1248,24 @@ export function CameraFeeds({ compact = false }: CameraFeedsProps) {
             {renderFeedContent("lidar")}
             <div className="absolute top-9 right-4 z-10">
               <Select value={embedMode.lidar} onValueChange={(value) => handleEmbedModeChange("lidar", value as any)}>
+                <SelectTrigger className="w-[90px] h-7 text-xs bg-background/80 backdrop-blur-sm">
+                  <SelectValue placeholder="Mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="direct">Direct</SelectItem>
+                  <SelectItem value="iframe">Iframe</SelectItem>
+                  <SelectItem value="hls">HLS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </TabsContent>
+          <TabsContent value="customFeed" className="mt-0">
+            {renderFeedContent("customFeed")}
+            <div className="absolute top-9 right-4 z-10">
+              <Select
+                value={embedMode.customFeed}
+                onValueChange={(value) => handleEmbedModeChange("customFeed", value as any)}
+              >
                 <SelectTrigger className="w-[90px] h-7 text-xs bg-background/80 backdrop-blur-sm">
                   <SelectValue placeholder="Mode" />
                 </SelectTrigger>

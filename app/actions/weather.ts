@@ -10,8 +10,8 @@ export interface WeatherData {
 }
 
 export async function fetchWeatherData(lat: number, lon: number): Promise<WeatherData> {
-  // Check for the API key - try both environment variables to ensure compatibility
-  const API_KEY = process.env.OPENWEATHER_API_KEY || process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY
+  // Only check for the server-side API key
+  const API_KEY = process.env.OPENWEATHER_API_KEY
 
   if (!API_KEY) {
     console.error("Weather API key is missing - using mock data")
