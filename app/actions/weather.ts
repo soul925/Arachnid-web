@@ -10,7 +10,7 @@ export interface WeatherData {
 }
 
 export async function fetchWeatherData(lat: number, lon: number): Promise<WeatherData> {
-  // Only check for the server-side API key
+  // Only use the server-side API key
   const API_KEY = process.env.OPENWEATHER_API_KEY
 
   if (!API_KEY) {
