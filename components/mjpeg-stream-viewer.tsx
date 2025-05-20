@@ -131,7 +131,7 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full h-full">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">{title}</CardTitle>
         <div className="flex gap-2">
@@ -151,7 +151,8 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
+        {/* Increased aspect ratio for larger feed */}
+        <div className="relative w-full aspect-[16/9] bg-black rounded-md overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
               <Skeleton className="h-32 w-32 rounded-full" />
