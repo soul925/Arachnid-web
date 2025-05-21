@@ -19,10 +19,9 @@ import { SaveIcon, ServerIcon } from "lucide-react"
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false)
-  const [baseUrl, setBaseUrl] = useState("http://192.168.183.250:5000")
-  const [thermalEndpoint, setThermalEndpoint] = useState("/thermal_feed")
-  const [objectEndpoint, setObjectEndpoint] = useState("/object_detection_feed")
-  const [lidarEndpoint, setLidarEndpoint] = useState("/lidar_feed")
+  const [thermalUrl, setThermalUrl] = useState("http://192.168.183.250:5000/thermal_feed")
+  const [objectDetectionUrl, setObjectDetectionUrl] = useState("http://192.168.183.250:5000/object_detection_feed")
+  const [lidarUrl, setLidarUrl] = useState("http://192.168.183.250:5000/lidar_feed")
 
   useEffect(() => {
     setMounted(true)
@@ -32,10 +31,9 @@ export default function Dashboard() {
     if (savedConfig) {
       try {
         const config = JSON.parse(savedConfig)
-        setBaseUrl(config.baseUrl || "http://192.168.183.250:5000")
-        setThermalEndpoint(config.thermalEndpoint || "/thermal_feed")
-        setObjectEndpoint(config.objectDetectionEndpoint || "/object_detection_feed")
-        setLidarEndpoint(config.lidarEndpoint || "/lidar_feed")
+        setThermalUrl(config.thermalUrl || "http://192.168.183.250:5000/thermal_feed")
+        setObjectDetectionUrl(config.objectDetectionUrl || "http://192.168.183.250:5000/object_detection_feed")
+        setLidarUrl(config.lidarUrl || "http://192.168.183.250:5000/lidar_feed")
       } catch (error) {
         console.error("Error parsing saved camera config:", error)
       }
@@ -44,10 +42,9 @@ export default function Dashboard() {
 
   const saveConfig = () => {
     const config = {
-      baseUrl,
-      thermalEndpoint,
-      objectDetectionEndpoint: objectEndpoint,
-      lidarEndpoint,
+      thermalUrl,
+      objectDetectionUrl,
+      lidarUrl,
     }
     localStorage.setItem("hexabot-camera-config", JSON.stringify(config))
     alert("Camera configuration saved successfully!")
@@ -64,7 +61,7 @@ export default function Dashboard() {
           <div className="flex min-h-screen flex-col">
             <Header />
             <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-              {/* Camera URL Configuration Card - Made more compact */}
+              {/* Camera URL Configuration Card - Independent URLs */}
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -73,41 +70,32 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div className="md:col-span-2">
-                      <Label htmlFor="base-url">Base URL</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label htmlFor="thermal-url">Thermal Camera URL</Label>
                       <Input
-                        id="base-url"
-                        value={baseUrl}
-                        onChange={(e) => setBaseUrl(e.target.value)}
-                        placeholder="http://192.168.183.250:5000"
+                        id="thermal-url"
+                        value={thermalUrl}
+                        onChange={(e) => setThermalUrl(e.target.value)}
+                        placeholder="http://192.168.183.250:5000/thermal_feed"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="thermal-endpoint">Thermal</Label>
+                      <Label htmlFor="object-detection-url">Object Detection URL</Label>
                       <Input
-                        id="thermal-endpoint"
-                        value={thermalEndpoint}
-                        onChange={(e) => setThermalEndpoint(e.target.value)}
-                        placeholder="/thermal_feed"
+                        id="object-detection-url"
+                        value={objectDetectionUrl}
+                        onChange={(e) => setObjectDetectionUrl(e.target.value)}
+                        placeholder="http://192.168.183.250:5000/object_detection_feed"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="object-endpoint">Object Detection</Label>
+                      <Label htmlFor="lidar-url">LIDAR Camera URL</Label>
                       <Input
-                        id="object-endpoint"
-                        value={objectEndpoint}
-                        onChange={(e) => setObjectEndpoint(e.target.value)}
-                        placeholder="/object_detection_feed"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lidar-endpoint">LIDAR</Label>
-                      <Input
-                        id="lidar-endpoint"
-                        value={lidarEndpoint}
-                        onChange={(e) => setLidarEndpoint(e.target.value)}
-                        placeholder="/lidar_feed"
+                        id="lidar-url"
+                        value={lidarUrl}
+                        onChange={(e) => setLidarUrl(e.target.value)}
+                        placeholder="http://192.168.183.250:5000/lidar_feed"
                       />
                     </div>
                   </div>
@@ -127,12 +115,7 @@ export default function Dashboard() {
                   <TabsTrigger value="rtsp-help">RTSP Help</TabsTrigger>
                 </TabsList>
                 <TabsContent value="camera-feeds" className="space-y-4">
-                  <CameraFeeds
-                    baseUrl={baseUrl}
-                    thermalEndpoint={thermalEndpoint}
-                    objectEndpoint={objectEndpoint}
-                    lidarEndpoint={lidarEndpoint}
-                  />
+                  <CameraFeeds thermalUrl={thermalUrl} objectDetectionUrl={objectDetectionUrl} lidarUrl={lidarUrl} />
                 </TabsContent>
                 <TabsContent value="weather" className="space-y-4">
                   <LocationWeather />

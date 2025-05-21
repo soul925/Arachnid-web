@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AlertCircle, RefreshCw, Maximize, Save } from "lucide-react"
+import { AlertCircle, RefreshCw, Maximize, Save, CheckCircle } from "lucide-react"
 import { useLogContext } from "@/context/log-context"
+import { toast } from "@/components/ui/use-toast"
 
 interface MjpegStreamViewerProps {
   streamUrl: string
@@ -18,6 +19,7 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
   const { addLog } = useLogContext()
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -95,38 +97,80 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
     }
   }
 
-  const captureFrame = () => {
-    if (!imgRef.current || !onSave) return
+  const captureAndSaveFrame = () => {
+    if (!imgRef.current) return
+
+    setIsSaving(true)
 
     try {
       // Create a canvas to capture the current frame
       const canvas = canvasRef.current || document.createElement("canvas")
-      canvas.width = imgRef.current.naturalWidth || imgRef.current.width
-      canvas.height = imgRef.current.naturalHeight || imgRef.current.height
+
+      // Set canvas dimensions to match the image
+      const width = imgRef.current.naturalWidth || imgRef.current.width || 640
+      const height = imgRef.current.naturalHeight || imgRef.current.height || 480
+
+      canvas.width = width
+      canvas.height = height
 
       const ctx = canvas.getContext("2d")
-      if (!ctx) return
+      if (!ctx) {
+        throw new Error("Could not get canvas context")
+      }
 
-      // Draw the current frame to the canvas
-      ctx.drawImage(imgRef.current, 0, 0, canvas.width, canvas.height)
+      // Clear canvas and draw the current frame
+      ctx.clearRect(0, 0, width, height)
+      ctx.drawImage(imgRef.current, 0, 0, width, height)
 
-      // Convert to data URL
+      // Convert to JPEG data URL with high quality
       const imageUrl = canvas.toDataURL("image/jpeg", 0.95)
-      onSave(imageUrl)
+
+      // Create a timestamp for the filename
+      const timestamp = new Date().toISOString().replace(/:/g, "-").replace(/\..+/, "")
+      const filename = `${title.toLowerCase().replace(/\s+/g, "-")}-${timestamp}.jpg`
+
+      // Create a download link
+      const downloadLink = document.createElement("a")
+      downloadLink.href = imageUrl
+      downloadLink.download = filename
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      document.body.removeChild(downloadLink)
+
+      // Call the onSave callback if provided
+      if (onSave) {
+        onSave(imageUrl)
+      }
+
+      // Show success toast
+      toast({
+        title: "Image Saved",
+        description: `Snapshot saved as ${filename}`,
+        duration: 3000,
+      })
 
       addLog({
-        message: `Captured frame from MJPEG stream: ${title}`,
+        message: `Saved snapshot from ${title} camera as ${filename}`,
         type: "success",
         timestamp: new Date(),
       })
     } catch (err) {
       console.error("Error capturing frame:", err)
 
+      toast({
+        title: "Save Failed",
+        description: `Could not save image: ${err instanceof Error ? err.message : "Unknown error"}`,
+        variant: "destructive",
+        duration: 3000,
+      })
+
       addLog({
-        message: `Error capturing frame from MJPEG stream: ${err}`,
+        message: `Error saving snapshot from ${title} camera: ${err}`,
         type: "error",
         timestamp: new Date(),
       })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -136,13 +180,11 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
         <CardTitle className="text-xl font-bold">{title}</CardTitle>
         <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={refreshStream} disabled={isLoading}>
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </Button>
-          {onSave && (
-            <Button variant="outline" size="icon" onClick={captureFrame} disabled={!isConnected}>
-              <Save className="h-4 w-4" />
-            </Button>
-          )}
+          <Button variant="outline" size="icon" onClick={captureAndSaveFrame} disabled={!isConnected || isSaving}>
+            {isSaving ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Save className="h-4 w-4" />}
+          </Button>
           {onMaximize && (
             <Button variant="outline" size="icon" onClick={onMaximize} disabled={!isConnected}>
               <Maximize className="h-4 w-4" />
@@ -177,6 +219,7 @@ export function MjpegStreamViewer({ streamUrl, title, onSave, onMaximize }: Mjpe
             className="w-full h-full object-contain"
             onLoad={handleImageLoad}
             onError={handleImageError}
+            crossOrigin="anonymous"
           />
         </div>
 

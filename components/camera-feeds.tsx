@@ -1,30 +1,31 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { MjpegStreamViewer } from "@/components/mjpeg-stream-viewer"
 import { useLogContext } from "@/context/log-context"
+import { Button } from "@/components/ui/button"
+import { Download, Trash, ImageIcon } from "lucide-react"
+import { toast } from "@/components/ui/use-toast"
 
 interface CameraFeedsProps {
   compact?: boolean
-  baseUrl: string
-  thermalEndpoint: string
-  objectEndpoint: string
-  lidarEndpoint: string
+  thermalUrl: string
+  objectDetectionUrl: string
+  lidarUrl: string
 }
 
 export function CameraFeeds({
   compact = false,
-  baseUrl = "http://192.168.183.250:5000",
-  thermalEndpoint = "/thermal_feed",
-  objectEndpoint = "/object_detection_feed",
-  lidarEndpoint = "/lidar_feed",
+  thermalUrl = "http://192.168.183.250:5000/thermal_feed",
+  objectDetectionUrl = "http://192.168.183.250:5000/object_detection_feed",
+  lidarUrl = "http://192.168.183.250:5000/lidar_feed",
 }: CameraFeedsProps) {
   const { addLog } = useLogContext()
   const [savedFeeds, setSavedFeeds] = useState<Array<{ id: string; name: string; url: string; timestamp: Date }>>([])
 
-  const handleSaveFrame = (feedName: string, imageUrl: string) => {
-    // Save the captured frame
+  const handleSaveFrame = (imageUrl: string, feedName: string) => {
+    // Save the captured frame to the saved feeds collection
     const timestamp = new Date()
     const newFeed = {
       id: Date.now().toString(),
@@ -35,17 +36,60 @@ export function CameraFeeds({
 
     setSavedFeeds((prev) => [...prev, newFeed])
 
-    // Also download the image
-    const a = document.createElement("a")
-    a.href = imageUrl
-    a.download = `${feedName.toLowerCase().replace(/\s+/g, "-")}-${timestamp.toISOString().replace(/:/g, "-")}.jpg`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    addLog({
+      message: `Image from ${feedName} saved to gallery`,
+      type: "success",
+      timestamp: new Date(),
+    })
+  }
+
+  const downloadImage = (imageUrl: string, imageName: string) => {
+    try {
+      // Create a timestamp for the filename
+      const timestamp = new Date().toISOString().replace(/:/g, "-").replace(/\..+/, "")
+      const filename = `${imageName.toLowerCase().replace(/\s+/g, "-")}.jpg`
+
+      // Create a download link
+      const downloadLink = document.createElement("a")
+      downloadLink.href = imageUrl
+      downloadLink.download = filename
+      document.body.appendChild(downloadLink)
+      downloadLink.click()
+      document.body.removeChild(downloadLink)
+
+      toast({
+        title: "Image Downloaded",
+        description: `Saved as ${filename}`,
+        duration: 3000,
+      })
+
+      addLog({
+        message: `Downloaded image: ${filename}`,
+        type: "success",
+        timestamp: new Date(),
+      })
+    } catch (error) {
+      console.error("Error downloading image:", error)
+      toast({
+        title: "Download Failed",
+        description: "Could not download the image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const deleteImage = (id: string) => {
+    setSavedFeeds((prev) => prev.filter((feed) => feed.id !== id))
+
+    toast({
+      title: "Image Deleted",
+      description: "Image removed from saved gallery",
+      duration: 3000,
+    })
 
     addLog({
-      message: `Saved ${feedName} camera frame`,
-      type: "success",
+      message: "Removed image from saved gallery",
+      type: "info",
       timestamp: new Date(),
     })
   }
@@ -53,8 +97,6 @@ export function CameraFeeds({
   if (compact) {
     return (
       <div className="h-[300px]">
-        {" "}
-        {/* Increased height for compact view */}
         <Tabs defaultValue="object-detection">
           <TabsList className="w-full">
             <TabsTrigger value="object-detection">Object Detection</TabsTrigger>
@@ -63,23 +105,23 @@ export function CameraFeeds({
           </TabsList>
           <TabsContent value="object-detection">
             <MjpegStreamViewer
-              streamUrl={`${baseUrl}${objectEndpoint}`}
+              streamUrl={objectDetectionUrl}
               title="Object Detection"
-              onSave={(imageUrl) => handleSaveFrame("Object Detection", imageUrl)}
+              onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
             />
           </TabsContent>
           <TabsContent value="thermal">
             <MjpegStreamViewer
-              streamUrl={`${baseUrl}${thermalEndpoint}`}
+              streamUrl={thermalUrl}
               title="Thermal"
-              onSave={(imageUrl) => handleSaveFrame("Thermal", imageUrl)}
+              onSave={(imageUrl) => handleSaveFrame(imageUrl, "Thermal")}
             />
           </TabsContent>
           <TabsContent value="lidar">
             <MjpegStreamViewer
-              streamUrl={`${baseUrl}${lidarEndpoint}`}
+              streamUrl={lidarUrl}
               title="LIDAR"
-              onSave={(imageUrl) => handleSaveFrame("LIDAR", imageUrl)}
+              onSave={(imageUrl) => handleSaveFrame(imageUrl, "LIDAR")}
             />
           </TabsContent>
         </Tabs>
@@ -96,40 +138,57 @@ export function CameraFeeds({
         </div>
       </div>
 
-      {/* Changed to 2 columns instead of 3 for larger feeds */}
+      {/* Camera feeds grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Object Detection Camera */}
         <MjpegStreamViewer
-          streamUrl={`${baseUrl}${objectEndpoint}`}
+          streamUrl={objectDetectionUrl}
           title="Object Detection Camera"
-          onSave={(imageUrl) => handleSaveFrame("Object Detection", imageUrl)}
+          onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
         />
 
         {/* Thermal Camera */}
         <MjpegStreamViewer
-          streamUrl={`${baseUrl}${thermalEndpoint}`}
+          streamUrl={thermalUrl}
           title="Thermal Camera"
-          onSave={(imageUrl) => handleSaveFrame("Thermal", imageUrl)}
+          onSave={(imageUrl) => handleSaveFrame(imageUrl, "Thermal")}
         />
 
         {/* LIDAR Camera - Full width in its own row */}
         <div className="md:col-span-2">
           <MjpegStreamViewer
-            streamUrl={`${baseUrl}${lidarEndpoint}`}
+            streamUrl={lidarUrl}
             title="LIDAR Camera"
-            onSave={(imageUrl) => handleSaveFrame("LIDAR", imageUrl)}
+            onSave={(imageUrl) => handleSaveFrame(imageUrl, "LIDAR")}
           />
         </div>
       </div>
 
-      {/* Saved Feeds Section */}
-      {savedFeeds.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Saved Frames</CardTitle>
-            <CardDescription>Captured frames from camera feeds</CardDescription>
-          </CardHeader>
-          <CardContent>
+      {/* Saved Feeds Section - Now with more prominence */}
+      <Card className="mt-6 border-t-4 border-t-blue-500">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-blue-500" />
+              <CardTitle>Saved Images Gallery</CardTitle>
+            </div>
+            <div className="text-sm text-muted-foreground">{savedFeeds.length} images saved</div>
+          </div>
+          <CardDescription>
+            View and download your saved camera snapshots here. Click the download button to save any image to your
+            device.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {savedFeeds.length === 0 ? (
+            <div className="text-center py-8 border rounded-md">
+              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+              <h3 className="text-lg font-medium">No saved images yet</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Click the save button on any camera feed to capture and save images
+              </p>
+            </div>
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {savedFeeds.map((feed) => (
                 <Card key={feed.id} className="overflow-hidden">
@@ -140,12 +199,26 @@ export function CameraFeeds({
                     <div className="font-medium truncate">{feed.name}</div>
                     <div className="text-xs text-muted-foreground mt-1">{feed.timestamp.toLocaleString()}</div>
                   </CardContent>
+                  <CardFooter className="p-3 pt-0 flex justify-between">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mr-2"
+                      onClick={() => downloadImage(feed.url, feed.name)}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-auto" onClick={() => deleteImage(feed.id)}>
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </CardFooter>
                 </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
