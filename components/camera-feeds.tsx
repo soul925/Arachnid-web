@@ -12,14 +12,12 @@ interface CameraFeedsProps {
   compact?: boolean
   thermalUrl: string
   objectDetectionUrl: string
-  lidarUrl: string
 }
 
 export function CameraFeeds({
   compact = false,
   thermalUrl = "http://192.168.183.250:5000/thermal_feed",
-  objectDetectionUrl = "http://192.168.183.250:5000/object_detection_feed",
-  lidarUrl = "http://192.168.183.250:5000/lidar_feed",
+  objectDetectionUrl = "http://192.168.183.251:5000/object_detection_feed",
 }: CameraFeedsProps) {
   const { addLog } = useLogContext()
   const [savedFeeds, setSavedFeeds] = useState<Array<{ id: string; name: string; url: string; timestamp: Date }>>([])
@@ -97,19 +95,11 @@ export function CameraFeeds({
   if (compact) {
     return (
       <div className="h-[300px]">
-        <Tabs defaultValue="object-detection">
+        <Tabs defaultValue="thermal">
           <TabsList className="w-full">
-            <TabsTrigger value="object-detection">Object Detection</TabsTrigger>
             <TabsTrigger value="thermal">Thermal</TabsTrigger>
-            <TabsTrigger value="lidar">LIDAR</TabsTrigger>
+            <TabsTrigger value="object-detection">Object Detection</TabsTrigger>
           </TabsList>
-          <TabsContent value="object-detection">
-            <MjpegStreamViewer
-              streamUrl={objectDetectionUrl}
-              title="Object Detection"
-              onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
-            />
-          </TabsContent>
           <TabsContent value="thermal">
             <MjpegStreamViewer
               streamUrl={thermalUrl}
@@ -117,11 +107,11 @@ export function CameraFeeds({
               onSave={(imageUrl) => handleSaveFrame(imageUrl, "Thermal")}
             />
           </TabsContent>
-          <TabsContent value="lidar">
+          <TabsContent value="object-detection">
             <MjpegStreamViewer
-              streamUrl={lidarUrl}
-              title="LIDAR"
-              onSave={(imageUrl) => handleSaveFrame(imageUrl, "LIDAR")}
+              streamUrl={objectDetectionUrl}
+              title="Object Detection"
+              onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
             />
           </TabsContent>
         </Tabs>
@@ -138,15 +128,8 @@ export function CameraFeeds({
         </div>
       </div>
 
-      {/* Camera feeds grid */}
+      {/* Camera feeds grid - 2 columns for 2 feeds */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Object Detection Camera */}
-        <MjpegStreamViewer
-          streamUrl={objectDetectionUrl}
-          title="Object Detection Camera"
-          onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
-        />
-
         {/* Thermal Camera */}
         <MjpegStreamViewer
           streamUrl={thermalUrl}
@@ -154,17 +137,15 @@ export function CameraFeeds({
           onSave={(imageUrl) => handleSaveFrame(imageUrl, "Thermal")}
         />
 
-        {/* LIDAR Camera - Full width in its own row */}
-        <div className="md:col-span-2">
-          <MjpegStreamViewer
-            streamUrl={lidarUrl}
-            title="LIDAR Camera"
-            onSave={(imageUrl) => handleSaveFrame(imageUrl, "LIDAR")}
-          />
-        </div>
+        {/* Object Detection Camera */}
+        <MjpegStreamViewer
+          streamUrl={objectDetectionUrl}
+          title="Object Detection Camera"
+          onSave={(imageUrl) => handleSaveFrame(imageUrl, "Object Detection")}
+        />
       </div>
 
-      {/* Saved Feeds Section - Now with more prominence */}
+      {/* Saved Feeds Section */}
       <Card className="mt-6 border-t-4 border-t-blue-500">
         <CardHeader>
           <div className="flex items-center justify-between">

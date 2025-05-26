@@ -20,8 +20,7 @@ import { SaveIcon, ServerIcon } from "lucide-react"
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false)
   const [thermalUrl, setThermalUrl] = useState("http://192.168.183.250:5000/thermal_feed")
-  const [objectDetectionUrl, setObjectDetectionUrl] = useState("http://192.168.183.250:5000/object_detection_feed")
-  const [lidarUrl, setLidarUrl] = useState("http://192.168.183.250:5000/lidar_feed")
+  const [objectDetectionUrl, setObjectDetectionUrl] = useState("http://192.168.183.251:5000/object_detection_feed")
 
   useEffect(() => {
     setMounted(true)
@@ -32,8 +31,7 @@ export default function Dashboard() {
       try {
         const config = JSON.parse(savedConfig)
         setThermalUrl(config.thermalUrl || "http://192.168.183.250:5000/thermal_feed")
-        setObjectDetectionUrl(config.objectDetectionUrl || "http://192.168.183.250:5000/object_detection_feed")
-        setLidarUrl(config.lidarUrl || "http://192.168.183.250:5000/lidar_feed")
+        setObjectDetectionUrl(config.objectDetectionUrl || "http://192.168.183.251:5000/object_detection_feed")
       } catch (error) {
         console.error("Error parsing saved camera config:", error)
       }
@@ -44,7 +42,6 @@ export default function Dashboard() {
     const config = {
       thermalUrl,
       objectDetectionUrl,
-      lidarUrl,
     }
     localStorage.setItem("hexabot-camera-config", JSON.stringify(config))
     alert("Camera configuration saved successfully!")
@@ -70,7 +67,7 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
                       <Label htmlFor="thermal-url">Thermal Camera URL</Label>
                       <Input
@@ -81,21 +78,12 @@ export default function Dashboard() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="object-detection-url">Object Detection URL</Label>
+                      <Label htmlFor="object-detection-url">Object Detection Camera URL</Label>
                       <Input
                         id="object-detection-url"
                         value={objectDetectionUrl}
                         onChange={(e) => setObjectDetectionUrl(e.target.value)}
-                        placeholder="http://192.168.183.250:5000/object_detection_feed"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="lidar-url">LIDAR Camera URL</Label>
-                      <Input
-                        id="lidar-url"
-                        value={lidarUrl}
-                        onChange={(e) => setLidarUrl(e.target.value)}
-                        placeholder="http://192.168.183.250:5000/lidar_feed"
+                        placeholder="http://192.168.183.251:5000/object_detection_feed"
                       />
                     </div>
                   </div>
@@ -115,7 +103,7 @@ export default function Dashboard() {
                   <TabsTrigger value="rtsp-help">RTSP Help</TabsTrigger>
                 </TabsList>
                 <TabsContent value="camera-feeds" className="space-y-4">
-                  <CameraFeeds thermalUrl={thermalUrl} objectDetectionUrl={objectDetectionUrl} lidarUrl={lidarUrl} />
+                  <CameraFeeds thermalUrl={thermalUrl} objectDetectionUrl={objectDetectionUrl} />
                 </TabsContent>
                 <TabsContent value="weather" className="space-y-4">
                   <LocationWeather />
